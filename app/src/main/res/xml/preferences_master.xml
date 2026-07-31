@@ -506,6 +506,12 @@
                     android:key="@string/pref_key__markdown_render_math"
                     android:summary="@string/katex_latex"
                     android:title="@string/math" />
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:icon="@drawable/ic_baseline_account_tree_24"
+                    android:key="@string/pref_key__markdown_render_mermaid"
+                    android:summary="@string/mermaid_diagrams"
+                    android:title="@string/mermaid" />
                 <MultiSelectListPreference
                     android:dialogTitle="@string/table_of_contents"
                     android:entries="@array/pref_arrdisp__markdown_toc"

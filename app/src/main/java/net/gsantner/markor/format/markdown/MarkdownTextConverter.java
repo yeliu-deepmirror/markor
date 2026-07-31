@@ -102,6 +102,7 @@ public class MarkdownTextConverter extends TextConverterBase {
     public static final String CSS_KATEX = CSS_S + ".katex { font-size: inherit; }" + CSS_E;
 
     public static final String HTML_MERMAID_INCLUDE = JS_PREFIX + "mermaid/mermaid.min.js" + JS_POSTFIX;
+    private static final Pattern MERMAID_PATTERN = Pattern.compile("(?is)```\\s*mermaid\\b|class\\s*=\\s*['\"][^'\"]*\\bmermaid\\b");
 
     public static final String HTML_FRONTMATTER_CONTAINER_S = "<div class='front-matter-container'>";
     public static final String HTML_FRONTMATTER_CONTAINER_E = "</div>";
@@ -283,11 +284,15 @@ public class MarkdownTextConverter extends TextConverterBase {
         }
 
         // Enable Mermaid
-        if (markup.contains("```mermaid")) {
+        if (as.isMarkdownMermaidEnabled() && MERMAID_PATTERN.matcher(markup).find()) {
             head += HTML_MERMAID_INCLUDE
                     + "<script>mermaid.initialize({theme:'"
                     + (GsContextUtils.instance.isDarkModeEnabled(context) ? "dark" : "default")
                     + "',logLevel:5,securityLevel:'loose'});</script>";
+            onLoadJs += "document.querySelectorAll('pre > code.language-mermaid').forEach(function(code) {"
+                    + "var diagram = document.createElement('div'); diagram.className = 'mermaid';"
+                    + "diagram.textContent = code.textContent; code.parentNode.replaceWith(diagram);"
+                    + "}); mermaid.init(undefined, '.mermaid');";
         }
 
         // Enable flexmark Admonition support

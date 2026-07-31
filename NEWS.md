@@ -73,6 +73,7 @@ A new "Pad mode" setting (Settings > General > Features) keeps the notebook file
 * Configure an absolute or relative image folder for previewed documents in Settings.
 * Image paths beginning with `/` now resolve from the configured image folder.
 * Fix Markdown headings immediately following an empty HTML paragraph.
+* Add optional Mermaid diagram rendering in Markdown view mode.
 
 ------------------------------------------------------------------------------------------------------------------------------------
 
