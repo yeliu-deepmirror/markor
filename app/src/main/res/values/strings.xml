@@ -299,6 +299,10 @@ work. If not, see <https://creativecommons.org/publicdomain/zero/1.0/>.
     <string name="multiple_windows">Multiple windows</string>
     <string name="font">Font</string>
     <string name="open_new_documents_always_in_new_window">Open documents always in separate windows. Switch using the \'recents\' key of your device.</string>
+    <string name="pad_mode">Pad mode</string>
+    <string name="pad_mode_summary">Keep the file list visible next to an open document, for tablets</string>
+    <string name="collapse_file_list">Collapse file list</string>
+    <string name="expand_file_list">Expand file list</string>
     <string name="enter_or_select_format">Enter or select format</string>
     <string name="pick_date">Pick date</string>
     <string name="pick_time">Pick time</string>
@@ -503,6 +507,8 @@ work. If not, see <https://creativecommons.org/publicdomain/zero/1.0/>.
     <string name="auto_format">Auto-format</string>
     <string name="insert_snippet">Insert snippet</string>
     <string name="snippet_directory">Snippet / Template directory</string>
+    <string name="image_load_relative_folder">Image load folder</string>
+    <string name="image_load_relative_folder_desc">Select the folder used to resolve image paths. Leave blank to use the document folder.</string>
     <string name="error_could_not_open_file">Error: Could not open file.</string>
     <string name="document_error_clip">Error encountered: Text copied to clipboard.</string>
     <string name="wont_save_min_length">Files with fewer than %d characters not saved automatically in order to prevent data loss.</string>

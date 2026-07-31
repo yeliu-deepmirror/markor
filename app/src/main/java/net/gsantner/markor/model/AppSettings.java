@@ -139,6 +139,14 @@ public class AppSettings extends GsSharedPreferencesPropertyBackend {
         setString(R.string.pref_key__snippet_directory_path, GsFileUtils.getPath(folder));
     }
 
+    public String getImageLoadFolder() {
+        return getString(R.string.pref_key__image_load_relative_folder, "");
+    }
+
+    public void setImageLoadFolder(final File folder) {
+        setString(R.string.pref_key__image_load_relative_folder, GsFileUtils.getPath(folder));
+    }
+
     public String getFontFamily() {
         return getString(R.string.pref_key__font_family, rstr(R.string.default_font_family));
     }
@@ -746,6 +754,10 @@ public class AppSettings extends GsSharedPreferencesPropertyBackend {
         } else {
             return false;
         }
+    }
+
+    public boolean isPadModeEnabled() {
+        return getBool(R.string.pref_key__is_pad_mode_enabled, false);
     }
 
     public boolean isSearchQueryCaseSensitive() {

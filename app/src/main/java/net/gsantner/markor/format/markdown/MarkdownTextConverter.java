@@ -309,6 +309,9 @@ public class MarkdownTextConverter extends TextConverterBase {
         // Replace space in url with %20, see #1365
         markup = escapeSpacesInLink(markup);
 
+        // A Markdown heading directly after an empty HTML paragraph is otherwise parsed as HTML.
+        markup = separateEmptyHtmlParagraphFromHeading(markup);
+
         // Replace tokens in note with corresponding YAML attribute values
         markup = replaceTokens(markup, fma);
         if (!TextUtils.isEmpty(fmaText)) {
@@ -344,6 +347,10 @@ public class MarkdownTextConverter extends TextConverterBase {
 
         // Deliver result
         return putContentIntoTemplate(context, converted, lightMode, file, onLoadJs, head);
+    }
+
+    static String separateEmptyHtmlParagraphFromHeading(final String markup) {
+        return markup.replaceAll("(?m)(^[ \\t]*<p[ \\t]*/?>[ \\t]*</p>[ \\t]*)\\n(?=[ \\t]{0,3}#{1,6}[ \\t])", "$1\n\n");
     }
 
     private String escapeSpacesInLink(final String markup) {

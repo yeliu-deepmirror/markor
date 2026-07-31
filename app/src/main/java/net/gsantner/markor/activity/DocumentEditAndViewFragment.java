@@ -43,6 +43,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentActivity;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -83,6 +84,7 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
     public static final String FRAGMENT_TAG = "DocumentEditAndViewFragment";
     public static final String SAVESTATE_DOCUMENT = "DOCUMENT";
     public static final String START_PREVIEW = "START_PREVIEW";
+    private static final String EXTRA_OPTIONS_MENU_ENABLED = "options_menu_enabled";
 
     public static float VIEW_FONT_SCALE = 100f / 15.7f;
 
@@ -100,10 +102,27 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
         return f;
     }
 
+    /**
+     * Controls whether this fragment contributes its menu to the host's shared toolbar.
+     * Used when the host already dedicates that toolbar to unrelated content (e.g. a
+     * file-browser toolbar hosting a Todo/QuickNote tab) and this fragment's own
+     * actions (save, search, undo/redo, preview toggle, ...) should not appear there.
+     */
+    public void setOptionsMenuEnabled(final boolean enabled) {
+        final Bundle args = getArguments();
+        if (args != null) {
+            args.putBoolean(EXTRA_OPTIONS_MENU_ENABLED, enabled);
+        }
+        if (isAdded()) {
+            setHasOptionsMenu(enabled);
+        }
+    }
+
     private HighlightingEditor _hlEditor;
     private WebView _webView;
     private ViewStub _webViewStub;
     private MarkorWebViewClient _webViewClient;
+    private Toolbar _externalToolbar;
     private ViewGroup _editorHolder;
     private ViewGroup _textActionsBar;
 
@@ -131,6 +150,9 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
             _document = (Document) savedInstanceState.getSerializable(SAVESTATE_DOCUMENT);
         } else if (args != null && args.containsKey(Document.EXTRA_DOCUMENT)) {
             _document = (Document) args.get(Document.EXTRA_DOCUMENT);
+        }
+        if (args != null && !args.getBoolean(EXTRA_OPTIONS_MENU_ENABLED, true)) {
+            setHasOptionsMenu(false);
         }
     }
 
@@ -177,6 +199,8 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
 
         if (activity instanceof DocumentActivity) {
             ((DocumentActivity) activity).setDocumentTitle(_document.title);
+        } else if (_externalToolbar != null) {
+            _externalToolbar.setTitle(_document.title);
         }
 
         // Preview mode set before loadDocument to prevent flicker
@@ -317,7 +341,35 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
         if (_editTextUndoRedoHelper != null && _editTextUndoRedoHelper.getTextView() != _hlEditor) {
             _editTextUndoRedoHelper.setTextView(_hlEditor);
         }
+        if (_externalToolbar != null) {
+            refreshOptionsMenu();
+        }
         super.onResume();
+    }
+
+    /**
+     * Attach this fragment's menu to its own {@link Toolbar} instead of the host activity's
+     * shared action bar - used when the fragment is shown alongside other content (e.g. the
+     * pad-mode file list) rather than taking over the whole activity.
+     */
+    public void setExternalToolbar(final Toolbar toolbar) {
+        _externalToolbar = toolbar;
+        setHasOptionsMenu(toolbar == null);
+    }
+
+    // Re-populates the fragment's menu, either on the shared action bar or on _externalToolbar
+    private void refreshOptionsMenu() {
+        final Activity activity = getActivity();
+        if (activity == null) {
+            return;
+        }
+        if (_externalToolbar != null) {
+            _externalToolbar.getMenu().clear();
+            populateOptionsMenu(_externalToolbar.getMenu(), activity.getMenuInflater());
+            _externalToolbar.setOnMenuItemClickListener(this::onOptionsItemSelected);
+        } else {
+            ((AppCompatActivity) activity).supportInvalidateOptionsMenu();
+        }
     }
 
     @Override
@@ -347,6 +399,13 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        if (_externalToolbar != null) {
+            return;
+        }
+        populateOptionsMenu(menu, inflater);
+    }
+
+    private void populateOptionsMenu(final Menu menu, final MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.document__edit__menu, menu);
         _cu.tintMenuItems(menu, true, _cu.rcolor(getContext(), R.color.dark__primary_text));
@@ -1162,6 +1221,19 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
         setViewModeVisibility(!_isPreviewVisible);
     }
 
+    // Fraction (0..1) of how far the editor is currently scrolled through its content
+    private float getEditScrollPercent() {
+        final int maxScroll = _editorHolder.getHeight() - _verticalScrollView.getHeight();
+        return maxScroll > 0 ? (_verticalScrollView.getScrollY() / (float) maxScroll) : 0f;
+    }
+
+    private void scrollEditToPercent(final float percent) {
+        final int maxScroll = _editorHolder.getHeight() - _verticalScrollView.getHeight();
+        if (maxScroll > 0) {
+            _verticalScrollView.scrollTo(0, Math.round(percent * maxScroll));
+        }
+    }
+
     public boolean isViewModeVisibility() {
         return _isPreviewVisible;
     }
@@ -1239,6 +1311,7 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
         _format.getActions().recreateActionButtons(_textActionsBar, show ? ActionButtonBase.ActionItem.DisplayMode.VIEW : ActionButtonBase.ActionItem.DisplayMode.EDIT);
         if (show) {
             setupWebViewIfNeeded(activity);
+            _webViewClient.setRestoreScrollYPercent(getEditScrollPercent());
             updateViewModeText();
             _cu.showSoftKeyboard(activity, false, _hlEditor);
             _hlEditor.clearFocus();
@@ -1246,7 +1319,16 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
             GsContextUtils.fadeInOut(_webView, _verticalScrollView, animate);
         } else {
             if (_webView != null) {
-                _webViewClient.setRestoreScrollY(_webView.getScrollY());
+                // Read the preview's current scroll fraction in JS (CSS pixel space), then
+                // apply the same fraction to the editor - keeps both modes' scroll in sync.
+                _webView.evaluateJavascript(
+                        "(function(){var m=document.documentElement.scrollHeight-window.innerHeight;return m>0?(window.scrollY/m):0;})();",
+                        value -> {
+                            try {
+                                scrollEditToPercent(Float.parseFloat(value));
+                            } catch (NumberFormatException ignored) {
+                            }
+                        });
             }
             GsContextUtils.fadeInOut(_verticalScrollView, _webView, animate);
         }
@@ -1255,7 +1337,7 @@ public class DocumentEditAndViewFragment extends MarkorBaseFragment implements F
         _isPreviewVisible = show;
 
         setActionBarVisibility();
-        ((AppCompatActivity) activity).supportInvalidateOptionsMenu();
+        refreshOptionsMenu();
     }
 
     // Callback from view-mode/javascript

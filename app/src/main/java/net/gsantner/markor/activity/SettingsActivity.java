@@ -172,6 +172,7 @@ public class SettingsActivity extends MarkorBaseActivity {
             updateSummary(R.string.pref_key__exts_to_always_open_in_this_app, _appSettings.getString(R.string.pref_key__exts_to_always_open_in_this_app, ""));
 
             updateSummary(R.string.pref_key__snippet_directory_path, _appSettings.getSnippetsDirectory().getAbsolutePath());
+            updateSummary(R.string.pref_key__image_load_relative_folder, _appSettings.getImageLoadFolder());
 
             final String fileDescFormat = _appSettings.getString(R.string.pref_key__file_description_format, "");
             if (fileDescFormat.equals("")) {
@@ -226,6 +227,8 @@ public class SettingsActivity extends MarkorBaseActivity {
             } else if (eq(key, R.string.pref_key__is_launcher_for_special_files_enabled)) {
                 boolean extraLaunchersEnabled = prefs.getBoolean(key, false);
                 new MarkorContextUtils(getActivity()).applySpecialLaunchersVisibility(getActivity(), extraLaunchersEnabled);
+            } else if (eq(key, R.string.pref_key__is_pad_mode_enabled)) {
+                _appSettings.setRecreateMainRequired(true);
             } else if (eq(key, R.string.pref_key__file_description_format)) {
                 try {
                     new SimpleDateFormat(prefs.getString(key, ""), Locale.getDefault());
@@ -266,6 +269,22 @@ public class SettingsActivity extends MarkorBaseActivity {
                         public void onFsViewerConfig(GsFileBrowserOptions.Options dopt) {
                             dopt.titleText = R.string.snippet_directory;
                             dopt.rootFolder = _appSettings.getNotebookDirectory();
+                        }
+                    }, fragManager, getActivity());
+                    return true;
+                }
+
+                case R.string.pref_key__image_load_relative_folder: {
+                    MarkorFileBrowserFactory.showFolderDialog(new GsFileBrowserOptions.SelectionListenerAdapter() {
+                        @Override
+                        public void onFsViewerSelected(String request, File file, final Integer lineNumber) {
+                            _appSettings.setImageLoadFolder(file);
+                            doUpdatePreferences();
+                        }
+
+                        @Override
+                        public void onFsViewerConfig(GsFileBrowserOptions.Options dopt) {
+                            dopt.titleText = R.string.image_load_relative_folder;
                         }
                     }, fragManager, getActivity());
                     return true;
