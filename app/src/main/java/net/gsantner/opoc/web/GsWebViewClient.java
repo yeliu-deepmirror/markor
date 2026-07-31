@@ -26,6 +26,7 @@ public class GsWebViewClient extends WebViewClient {
     @Override
     public void onPageFinished(final WebView webView, final String url) {
         __onPageFinished_restoreScrollY(webView, url);
+        __onPageFinished_restoreScrollYPercent(webView, url);
         super.onPageFinished(webView, url);
     }
 
@@ -55,6 +56,39 @@ public class GsWebViewClient extends WebViewClient {
     public void setRestoreScrollY(final int scrollY) {
         m_restoreScrollY = scrollY;
         m_restoreScrollYEnabled.set(scrollY >= 0);
+    }
+
+    /// /////////////////////////////////////////////////////////////////////////////////
+    private final AtomicBoolean m_restoreScrollYPercentEnabled = new AtomicBoolean(false);
+    private float m_restoreScrollYPercent = 0f;
+
+    /**
+     * Activate by {@link GsWebViewClient#setRestoreScrollYPercent(float)}
+     *
+     * @param webView onPageFinished {@link WebView}
+     * @param url     onPageFinished url
+     */
+    protected void __onPageFinished_restoreScrollYPercent(final WebView webView, final String url) {
+        if (m_restoreScrollYPercentEnabled.getAndSet(false)) {
+            final String js = "window.scrollTo(0, " + m_restoreScrollYPercent
+                    + " * (document.documentElement.scrollHeight - window.innerHeight));";
+            for (int dt : new int[]{50, 100, 150, 200, 250, 300}) {
+                webView.postDelayed(() -> webView.evaluateJavascript(js, null), dt);
+            }
+        }
+    }
+
+    /**
+     * Scroll to a fraction of the page's scrollable height on next page load.
+     * Unlike {@link #setRestoreScrollY(int)}, this is independent of the page's
+     * content height, so it applies correctly even when the content changed since
+     * the fraction was captured (e.g. syncing scroll position from a different view).
+     *
+     * @param percent fraction (0..1) of the page's scrollable height
+     */
+    public void setRestoreScrollYPercent(final float percent) {
+        m_restoreScrollYPercent = percent;
+        m_restoreScrollYPercentEnabled.set(true);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////

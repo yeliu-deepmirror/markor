@@ -8,65 +8,147 @@
  *
 #########################################################*/
 -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
+    android:baselineAligned="false"
     android:fitsSystemWindows="true"
+    android:orientation="horizontal"
     android:theme="@style/AppTheme.Unified"
     tools:context="net.gsantner.markor.activity.MainActivity">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:theme="@style/AppTheme.Light.AppBarOverlay">
-
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            android:theme="@style/LightTextToolbarOverlay"
-            app:subtitleTextColor="@color/dark__secondary_text"
-            app:title="@string/app_name">
-
-        </androidx.appcompat.widget.Toolbar>
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/main__view_pager_container"
+    <LinearLayout
+        android:id="@+id/main__left_pane"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="?attr/actionBarSize"
-        android:layout_marginBottom="?attr/actionBarSize" />
+        android:orientation="vertical">
 
-    <!--suppress AndroidUnknownAttribute -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_add_new_item"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="72dp"
-        android:contentDescription="@string/create_new_file_or_folder"
-        android:src="@drawable/ic_add_white_24dp"
-        app:shapeAppearance="@style/ShapeAppearanceOverlay.Material3.FloatingActionButton" />
+        <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/appbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:theme="@style/AppTheme.Light.AppBarOverlay">
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_navigation_bar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:layout_gravity="start|bottom"
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                android:theme="@style/LightTextToolbarOverlay"
+                app:contentInsetStartWithNavigation="0dp"
+                app:subtitleTextColor="@color/dark__secondary_text"
+                app:title="@string/app_name">
+
+                <ImageButton
+                    android:id="@+id/main__notebook_go_to_root"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/go_to"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_folder_white_24dp"
+                    android:visibility="gone" />
+
+                <ImageButton
+                    android:id="@+id/main__notebook_sort"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/sort_by"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_sort_black_24dp"
+                    android:visibility="gone" />
+
+            </androidx.appcompat.widget.Toolbar>
+
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/main__view_pager_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginBottom="?attr/actionBarSize" />
+
+            <!--suppress AndroidUnknownAttribute -->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fab_add_new_item"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="72dp"
+                android:contentDescription="@string/create_new_file_or_folder"
+                android:src="@drawable/ic_add_white_24dp"
+                app:shapeAppearance="@style/ShapeAppearanceOverlay.Material3.FloatingActionButton" />
+
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottom_navigation_bar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:layout_gravity="start|bottom"
+                android:background="@color/primary"
+                app:itemBackground="@color/primary"
+                app:itemIconTint="@drawable/bottomnav_color_selector"
+                app:itemTextColor="@drawable/bottomnav_color_selector"
+                app:labelVisibilityMode="labeled"
+                app:menu="@menu/main__bottom_nav" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/main__pane_toggle"
+        android:layout_width="32dp"
+        android:layout_height="match_parent"
         android:background="@color/primary"
-        app:itemBackground="@color/primary"
-        app:itemIconTint="@drawable/bottomnav_color_selector"
-        app:itemTextColor="@drawable/bottomnav_color_selector"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/main__bottom_nav" />
+        android:contentDescription="@string/collapse_file_list"
+        android:padding="4dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_baseline_keyboard_double_arrow_left_24"
+        android:tint="@color/white"
+        android:visibility="gone" />
 
-</FrameLayout>
+    <LinearLayout
+        android:id="@+id/main__document_pane"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:theme="@style/AppTheme.Light.AppBarOverlay">
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/main__document_pane_toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="@color/primary"
+                android:theme="@style/LightTextToolbarOverlay" />
+
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <FrameLayout
+            android:id="@+id/main__document_pane_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            tools:ignore="NestedWeights" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -26,11 +26,16 @@ import net.gsantner.opoc.util.GsFileUtils;
 import java.io.File;
 import java.util.Date;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import other.de.stanetz.jpencconverter.JavaPasswordbasedCryption;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class TextConverterBase {
+    private static final Pattern CONFIGURED_ROOT_RELATIVE_IMAGE_SOURCE = Pattern.compile(
+            "(<img\\b[^>]*\\bsrc\\s*=\\s*)([\\\"'])/(?!/)([^\\\"']*)([\\\"'])",
+            Pattern.CASE_INSENSITIVE
+    );
     //########################
     //## HTML
     //########################
@@ -112,19 +117,34 @@ public abstract class TextConverterBase {
             html = "Please report at project issue tracker: " + e;
         }
 
-        String parent = document.file.getParent();
-        if (parent == null) {
-            parent = as.getNotebookDirectory().getAbsolutePath();
+        final String imageLoadFolder = as.getImageLoadFolder();
+        if (imageLoadFolder != null && !imageLoadFolder.trim().isEmpty()) {
+            html = resolveConfiguredRootRelativeImageSources(html);
         }
-        final String baseFolder = "file://" + parent + "/";
 
-        webView.loadDataWithBaseURL(baseFolder, html, getContentType(), UTF_CHARSET, null);
+        final File baseFolder = getImageLoadBaseFolder(document.file, as.getNotebookDirectory(), as.getImageLoadFolder());
+        final String baseUrl = "file://" + baseFolder.getAbsolutePath() + "/";
+
+        webView.loadDataWithBaseURL(baseUrl, html, getContentType(), UTF_CHARSET, null);
 
         // When TOKEN_TEXT_CONVERTER_MAX_ZOOM_OUT_BY_DEFAULT is contained in text zoom out as far possible
         // Notice: overViewMode / useWideViewPort work differently
         for (int i = (html.contains(TOKEN_TEXT_CONVERTER_MAX_ZOOM_OUT_BY_DEFAULT) ? 0 : 99); i < 30; i++) {
             webView.postDelayed(webView::zoomOut, 210 * (i < 5 ? 1 : (i < 10 ? 2 : (i < 15 ? 3 : (i < 20 ? 5 : 9)))));
         }
+    }
+
+    protected static File getImageLoadBaseFolder(final File documentFile, final File fallbackFolder, final String relativeFolder) {
+        final File documentFolder = documentFile.getParentFile() == null ? fallbackFolder : documentFile.getParentFile();
+        if (relativeFolder == null || relativeFolder.trim().isEmpty()) {
+            return documentFolder;
+        }
+        final File configuredFolder = new File(relativeFolder);
+        return configuredFolder.isAbsolute() ? configuredFolder : new File(documentFolder, relativeFolder);
+    }
+
+    static String resolveConfiguredRootRelativeImageSources(final String html) {
+        return CONFIGURED_ROOT_RELATIVE_IMAGE_SOURCE.matcher(html).replaceAll("$1$2$3$4");
     }
 
     /**

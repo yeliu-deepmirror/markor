@@ -20,10 +20,14 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -68,6 +72,18 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
     private DocumentEditAndViewFragment _quicknote, _todo;
     private MoreFragment _more;
     private FloatingActionButton _fab;
+    private ViewGroup _leftPane;
+    private View _documentPane;
+    private FrameLayout _documentPaneContainer;
+    private Toolbar _documentPaneToolbar;
+    private ImageButton _paneToggle;
+    private ImageButton _notebookGoToRoot;
+    private ImageButton _notebookSort;
+    private DocumentEditAndViewFragment _paneDocument;
+    private boolean _leftPaneCollapsed = false;
+
+    private static final String SAVESTATE_PANE_DOCUMENT = "pad_mode_document_pane";
+    private static final String SAVESTATE_LEFT_PANE_COLLAPSED = "pad_mode_left_pane_collapsed";
 
     private MarkorContextUtils _cu;
     private File _quickSwitchPrevFolder = null;
@@ -90,6 +106,23 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
         _bottomNav = findViewById(R.id.bottom_navigation_bar);
         _viewPager = findViewById(R.id.main__view_pager_container);
         _fab = findViewById(R.id.fab_add_new_item);
+        _leftPane = findViewById(R.id.main__left_pane);
+        _documentPane = findViewById(R.id.main__document_pane);
+        _documentPaneContainer = findViewById(R.id.main__document_pane_container);
+        _documentPaneToolbar = findViewById(R.id.main__document_pane_toolbar);
+        _paneToggle = findViewById(R.id.main__pane_toggle);
+        _paneToggle.setOnClickListener(v -> {
+            _leftPaneCollapsed = !_leftPaneCollapsed;
+            applyPadModeLayout();
+        });
+        _notebookGoToRoot = findViewById(R.id.main__notebook_go_to_root);
+        _notebookSort = findViewById(R.id.main__notebook_sort);
+        final int notebookToolsTint = _cu.rcolor(this, R.color.dark__primary_text);
+        _notebookGoToRoot.setImageDrawable(_cu.tintDrawable(this, R.drawable.ic_folder_white_24dp, notebookToolsTint));
+        _notebookSort.setImageDrawable(_cu.tintDrawable(this, R.drawable.ic_sort_black_24dp, notebookToolsTint));
+        _notebookGoToRoot.setOnClickListener(v -> triggerNotebookMenuAction(R.id.action_go_to));
+        _notebookSort.setOnClickListener(v -> triggerNotebookMenuAction(R.id.action_sort));
+        applyPadModeLayout();
         _fab.setOnClickListener(this::onClickFab);
         _fab.setOnLongClickListener(this::onLongClickFab);
         _viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -162,6 +195,8 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
     public void onSaveInstanceState(@NonNull final Bundle outState) {
         super.onSaveInstanceState(outState);
 
+        outState.putBoolean(SAVESTATE_LEFT_PANE_COLLAPSED, _leftPaneCollapsed);
+
         // Save references to fragments
         try {
             final FragmentManager manager = getSupportFragmentManager();
@@ -170,6 +205,7 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
             manager.putFragment(outState, Integer.toString(R.id.nav_quicknote), _quicknote);
             manager.putFragment(outState, Integer.toString(R.id.nav_todo), _todo);
             manager.putFragment(outState, Integer.toString(R.id.nav_more), _more);
+            manager.putFragment(outState, SAVESTATE_PANE_DOCUMENT, _paneDocument);
         } catch (NullPointerException | IllegalStateException ignored) {
             Log.d(MainActivity.class.getName(), "Child fragments null in onSaveInstanceState()");
         }
@@ -183,6 +219,8 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
             return;
         }
 
+        _leftPaneCollapsed = savedInstanceState.getBoolean(SAVESTATE_LEFT_PANE_COLLAPSED, false);
+
         // Get back references to fragments
         try {
             final FragmentManager manager = getSupportFragmentManager();
@@ -190,6 +228,7 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
             _quicknote = (DocumentEditAndViewFragment) manager.getFragment(savedInstanceState, Integer.toString(R.id.nav_quicknote));
             _todo = (DocumentEditAndViewFragment) manager.getFragment(savedInstanceState, Integer.toString(R.id.nav_todo));
             _more = (MoreFragment) manager.getFragment(savedInstanceState, Integer.toString(R.id.nav_more));
+            _paneDocument = (DocumentEditAndViewFragment) manager.getFragment(savedInstanceState, SAVESTATE_PANE_DOCUMENT);
 
             if (_sectionsAdapter != null) {
                 _sectionsAdapter.restoreFragment(tabIdToPos(R.id.nav_notebook));
@@ -206,6 +245,8 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
         } catch (NullPointerException | IllegalStateException ignored) {
             Log.d(MainActivity.class.getName(), "Child fragment not found in onRestoreInstanceState()");
         }
+
+        applyPadModeLayout();
     }
 
     // Reduces swipe sensitivity
@@ -374,11 +415,52 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
 
     private void newItemCallback(final File file) {
         if (file.isFile()) {
-            DocumentActivity.launch(MainActivity.this, file, false, null);
+            if (_appSettings.isPadModeEnabled()) {
+                showDocumentInPane(file, null, false);
+            } else {
+                DocumentActivity.launch(MainActivity.this, file, false, null);
+            }
         }
         if (_notebook != null && _notebook.getAdapter() != null) {
             _notebook.getAdapter().showFile(file);
         }
+    }
+
+    /**
+     * Adjusts the left/right pane split according to pad mode, the current tab, and
+     * whether the file list has been collapsed via the pane toggle button.
+     * The split is only shown while browsing the notebook; other tabs stay full-width.
+     */
+    private void applyPadModeLayout() {
+        final boolean showSplit = _appSettings.isPadModeEnabled() && getCurrentPos() == tabIdToPos(R.id.nav_notebook);
+        _documentPane.setVisibility(showSplit ? View.VISIBLE : View.GONE);
+        _paneToggle.setVisibility(showSplit ? View.VISIBLE : View.GONE);
+
+        if (showSplit) {
+            _leftPane.setVisibility(_leftPaneCollapsed ? View.GONE : View.VISIBLE);
+            final ViewGroup.LayoutParams params = _leftPane.getLayoutParams();
+            params.width = getResources().getDimensionPixelSize(R.dimen.pad_mode_sidebar_width);
+            _leftPane.setLayoutParams(params);
+            _paneToggle.setImageResource(_leftPaneCollapsed
+                    ? R.drawable.ic_baseline_keyboard_double_arrow_right_24
+                    : R.drawable.ic_baseline_keyboard_double_arrow_left_24);
+            _paneToggle.setContentDescription(getString(_leftPaneCollapsed ? R.string.expand_file_list : R.string.collapse_file_list));
+        } else {
+            _leftPane.setVisibility(View.VISIBLE);
+            final ViewGroup.LayoutParams params = _leftPane.getLayoutParams();
+            params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+            _leftPane.setLayoutParams(params);
+        }
+    }
+
+    // Shows a document in the pad-mode side pane instead of launching DocumentActivity
+    private void showDocumentInPane(final File file, final Integer lineNumber, final Boolean preview) {
+        _paneDocument = DocumentEditAndViewFragment.newInstance(new Document(file), lineNumber, preview);
+        _paneDocument.setExternalToolbar(_documentPaneToolbar);
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.main__document_pane_container, _paneDocument, _paneDocument.getFragmentTag())
+                .commit();
+        // Title and menu are populated by the fragment itself, once loaded, into _documentPaneToolbar.
     }
 
     private void showLargeFileOpenToastIfNeeded(final File file) {
@@ -396,6 +478,11 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
 
     @Override
     public void onBackPressed() {
+        final boolean onNotebookTab = getCurrentPos() == tabIdToPos(R.id.nav_notebook);
+        if (_paneDocument != null && onNotebookTab && _paneDocument.onBackPressed()) {
+            return;
+        }
+
         // Check if fragment handled back press
         final GsFragmentBase<?, ?> frag = getPosFragment(getCurrentPos());
         if (frag == null || !frag.onBackPressed()) {
@@ -470,14 +557,28 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
             _sectionsAdapter.ensureRealized(pos);
         }
 
-        if (pos == tabIdToPos(R.id.nav_notebook)) {
+        final boolean onNotebookTab = pos == tabIdToPos(R.id.nav_notebook);
+        if (onNotebookTab) {
             _fab.show();
             hideKeyboard();
         } else {
             _fab.hide();
         }
+        _notebookGoToRoot.setVisibility(onNotebookTab ? View.VISIBLE : View.GONE);
+        _notebookSort.setVisibility(onNotebookTab ? View.VISIBLE : View.GONE);
+
+        applyPadModeLayout();
 
         setTitle(getPosTitle(pos));
+    }
+
+    // Routes a click on one of the toolbar's notebook shortcut buttons to the
+    // corresponding menu action already implemented by GsFileBrowserFragment.
+    private void triggerNotebookMenuAction(final int menuItemId) {
+        final MenuItem item = _notebook != null ? _notebook.getFragmentMenu().findItem(menuItemId) : null;
+        if (item != null) {
+            _notebook.onOptionsItemSelected(item);
+        }
     }
 
     private GsFileBrowserOptions.Options _filesystemDialogOptions = null;
@@ -514,7 +615,11 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
                 @Override
                 public void onFsViewerSelected(String request, File file, final Integer lineNumber) {
                     showLargeFileOpenToastIfNeeded(file);
-                    DocumentActivity.launch(MainActivity.this, file, null, lineNumber);
+                    if (_appSettings.isPadModeEnabled()) {
+                        showDocumentInPane(file, lineNumber, null);
+                    } else {
+                        DocumentActivity.launch(MainActivity.this, file, null, lineNumber);
+                    }
                 }
             });
         }
@@ -541,8 +646,10 @@ public class MainActivity extends MarkorBaseActivity implements GsFileBrowserFra
             final int id = tabIdFromPos(pos);
             if (id == R.id.nav_quicknote) {
                 frag = _quicknote = DocumentEditAndViewFragment.newInstance(new Document(_appSettings.getQuickNoteFile()), -1, false);
+                _quicknote.setOptionsMenuEnabled(false);
             } else if (id == R.id.nav_todo) {
                 frag = _todo = DocumentEditAndViewFragment.newInstance(new Document(_appSettings.getTodoFile()), -1, false);
+                _todo.setOptionsMenuEnabled(false);
             } else if (id == R.id.nav_more) {
                 frag = _more = MoreFragment.newInstance();
             } else {

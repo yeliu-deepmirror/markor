@@ -62,6 +62,18 @@ If you have questions or found an issue please head to the [Markor project](http
 
 ------------------------------------------------------------------------------------------------------------------------------------
 
+# Unreleased
+
+## Pad mode: keep the file list visible next to an open document
+
+A new "Pad mode" setting (Settings > General > Features) keeps the notebook file list visible as a fixed-width column while an opened file is shown in a pane next to it, instead of the document taking over the whole screen. Makes switching between files on a tablet a single tap.
+
+* Collapse the file list with a toggle button on the edge of the column to give the open document more room, and expand it again the same way.
+* The file list's own toolbar (search, go to root folder, sort) stays with it and collapses along with it; the open document gets its own toolbar for its own actions (save, search, undo/redo, preview toggle).
+* Configure an absolute or relative image folder for previewed documents in Settings.
+* Image paths beginning with `/` now resolve from the configured image folder.
+* Fix Markdown headings immediately following an empty HTML paragraph.
+
 ------------------------------------------------------------------------------------------------------------------------------------
 
 # Markor v2.11 - AsciiDoc, CSV and Org-Mode, Todo.txt advanced search, Line numbers
