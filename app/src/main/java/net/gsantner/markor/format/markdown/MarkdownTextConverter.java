@@ -350,7 +350,7 @@ public class MarkdownTextConverter extends TextConverterBase {
     }
 
     static String separateEmptyHtmlParagraphFromHeading(final String markup) {
-        return markup.replaceAll("(?m)(^[ \\t]*<p[ \\t]*/?>[ \\t]*</p>[ \\t]*)\\n(?=[ \\t]{0,3}#{1,6}[ \\t])", "$1\\n\\n");
+        return markup.replaceAll("(?m)(^[ \\t]*<p[ \\t]*/?>[ \\t]*</p>[ \\t]*)\\n(?=[ \\t]{0,3}#{1,6}[ \\t])", "$1\n\n");
     }
 
     private String escapeSpacesInLink(final String markup) {
